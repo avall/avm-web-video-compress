@@ -75,10 +75,10 @@ services:
 
 ## GitHub Pages
 
-The default build (`@sveltejs/adapter-static`) produces a fully static site in `build/`, deployed to [avall.github.io/video-compress](https://avall.github.io/video-compress/) by `.github/workflows/deploy.yml` on every push to `main`.
+The default build (`@sveltejs/adapter-static`) produces a fully static site in `build/`, deployed to [video-compress.jandrinet.cloud](https://video-compress.jandrinet.cloud/) (custom domain set in the repository Pages settings) by `.github/workflows/deploy.yml` on every push to `main`.
 
 - **Pages source**: in the repository settings, set Pages > Build and deployment > Source to **GitHub Actions**.
-- **Base path**: `BASE_PATH` sets the URL prefix the site is served under (`/video-compress` in the workflow). Leave it unset to serve from the root, as `npm run dev` does.
+- **Base path**: `BASE_PATH` sets the URL prefix the site is served under (for example `/video-compress` for `https://<user>.github.io/<repo>/`). The workflow leaves it unset because the custom domain serves the site from the root, as `npm run dev` does.
 - **Cross-origin isolation**: Pages cannot send the COOP/COEP headers ffmpeg.wasm multithreading needs, so a self-hosted [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) adds them. The first visit reloads once to activate it. `npm run build` copies the script from `node_modules` into `static/`.
 - **Other targets**: `ADAPTER=node` builds the Node server used by Docker, and `ADAPTER=cloudflare` builds for Cloudflare Workers (`npm run deploy:cloudflare`).
 
