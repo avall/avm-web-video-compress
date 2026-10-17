@@ -1,0 +1,231 @@
+import type { Engine } from './engine';
+import { MEGABYTE } from './presets';
+
+export const MAX_ENCODE_EDGE = 1920;
+export const MAX_CUSTOM_EDGE = 4096;
+export const MIN_VIDEO_BITRATE_KBPS = 64;
+export const MIN_AUDIO_BITRATE_KBPS = 24;
+
+const MAX_AUDIO_BITRATE_KBPS = 128;
+const AUDIO_BITRATE_SHARE = 0.12;
+
+const LOW_BITRATE_LADDER = [
+	{ minVideoKbps: 1500, maxEdge: MAX_ENCODE_EDGE, fpsCap: Infinity },
+	{ minVideoKbps: 800, maxEdge: 1280, fpsCap: Infinity },
+	{ minVideoKbps: 400, maxEdge: 854, fpsCap: Infinity },
+	{ minVideoKbps: 200, maxEdge: 640, fpsCap: 24 },
+	{ minVideoKbps: 0, maxEdge: 426, fpsCap: 15 }
+];
+
+export interface VideoMetadata {
+	duration: number;
+	bitrate: number;
+	resolution: string;
+	codec: string;
+	size: number;
+	fps: number;
+	hasMotion: boolean;
+}
+
+export interface CompressionSettings {
+	videoBitrate: string;
+	audioBitrate: string;
+	resolution: string;
+	crf: number;
+	preset: string;
+	tune: string;
+	bufferSize: string;
+	refs: number;
+	bframes: number;
+	targetFps: number;
+}
+
+/** Requested output size in pixels; 0 means derive that edge automatically. */
+export interface OutputDimensions {
+	width: number;
+	height: number;
+}
+
+export interface EncodingOptions {
+	preserveOriginalFps: boolean;
+	muteSound: boolean;
+	engine: Engine;
+	dimensions?: OutputDimensions;
+}
+
+const ENCODING_EFFICIENCY: Record<Engine, { motion: number; still: number }> = {
+	webcodecs: { motion: 0.93, still: 0.95 },
+	ffmpeg: { motion: 0.8, still: 0.85 }
+};
+
+const encodingEfficiency = (engine: Engine, hasMotion: boolean): number =>
+	hasMotion ? ENCODING_EFFICIENCY[engine].motion : ENCODING_EFFICIENCY[engine].still;
+
+const requiredBitrateKbps = (muteSound: boolean): number =>
+	MIN_VIDEO_BITRATE_KBPS + (muteSound ? 0 : MIN_AUDIO_BITRATE_KBPS);
+
+export const totalBitrateBudget = (
+	targetSize: number,
+	duration: number,
+	hasMotion: boolean,
+	engine: Engine
+): number =>
+	Math.round(((targetSize * 8) / duration / 1000) * encodingEfficiency(engine, hasMotion));
+
+export const minimumTargetSize = (
+	duration: number,
+	hasMotion: boolean,
+	muteSound: boolean
+): number =>
+	Math.ceil(
+		(requiredBitrateKbps(muteSound) * 1000 * duration) / 8 / encodingEfficiency('ffmpeg', hasMotion)
+	);
+
+const splitBitrate = (
+	totalKbps: number,
+	muteSound: boolean
+): { videoKbps: number; audioKbps: number } => {
+	if (muteSound) {
+		return { videoKbps: Math.max(MIN_VIDEO_BITRATE_KBPS, totalKbps), audioKbps: 0 };
+	}
+	const audioKbps = Math.min(
+		MAX_AUDIO_BITRATE_KBPS,
+		Math.max(MIN_AUDIO_BITRATE_KBPS, Math.round(totalKbps * AUDIO_BITRATE_SHARE))
+	);
+	return { videoKbps: Math.max(MIN_VIDEO_BITRATE_KBPS, totalKbps - audioKbps), audioKbps };
+};
+
+const ladderStep = (videoKbps: number): (typeof LOW_BITRATE_LADDER)[number] =>
+	LOW_BITRATE_LADDER.find((step) => videoKbps >= step.minVideoKbps) ??
+	LOW_BITRATE_LADDER[LOW_BITRATE_LADDER.length - 1];
+
+export const estimateBitrateKbps = (size: number, duration: number): number =>
+	Math.round((size * 8) / duration / 1000);
+
+export const detectMotion = (bitrateKbps: number, width: number, height: number): boolean => {
+	const bitratePerPixel = (bitrateKbps / (width * height)) * 1000;
+	return bitratePerPixel > 0.1 || bitrateKbps > 3000;
+};
+
+export interface VideoProbe {
+	duration: number;
+	width: number;
+	height: number;
+	codec: string;
+	fps: number;
+	size: number;
+}
+
+export const buildVideoMetadata = ({
+	duration,
+	width,
+	height,
+	codec,
+	fps,
+	size
+}: VideoProbe): VideoMetadata => {
+	const bitrate = estimateBitrateKbps(size, duration);
+	return {
+		duration,
+		bitrate,
+		resolution: `${width}x${height}`,
+		codec,
+		size,
+		fps,
+		hasMotion: detectMotion(bitrate, width, height)
+	};
+};
+
+export const fitWithinLongestEdge = (resolution: string, maxEdge: number): string => {
+	const [width, height] = resolution.split('x').map(Number);
+	const scale = maxEdge / Math.max(width, height);
+	if (scale >= 1) {
+		return resolution;
+	}
+	const toEven = (value: number): number => {
+		const scaled = Math.round(value * scale);
+		return Math.max(2, scaled - (scaled % 2));
+	};
+	return `${toEven(width)}x${toEven(height)}`;
+};
+
+const toCustomEdge = (value: number): number => {
+	const rounded = Math.round(Math.min(value, MAX_CUSTOM_EDGE));
+	return Math.max(2, rounded - (rounded % 2));
+};
+
+/** Resolves user dimensions against the source aspect ratio, or null when both are auto. */
+export const customResolution = (
+	resolution: string,
+	dimensions: OutputDimensions | undefined
+): string | null => {
+	const width = Math.min(dimensions?.width || 0, MAX_CUSTOM_EDGE);
+	const height = Math.min(dimensions?.height || 0, MAX_CUSTOM_EDGE);
+	if (width <= 0 && height <= 0) {
+		return null;
+	}
+	const [sourceWidth, sourceHeight] = resolution.split('x').map(Number);
+	const finalWidth = width > 0 ? width : (height * sourceWidth) / sourceHeight;
+	const finalHeight = height > 0 ? height : (width * sourceHeight) / sourceWidth;
+	return `${toCustomEdge(finalWidth)}x${toCustomEdge(finalHeight)}`;
+};
+
+export const calculateCompressionSettings = (
+	targetSize: number,
+	metadata: VideoMetadata,
+	{ preserveOriginalFps, muteSound, engine, dimensions }: EncodingOptions
+): CompressionSettings => {
+	const { videoKbps: videoBitrate, audioKbps: audioBitrate } = splitBitrate(
+		totalBitrateBudget(targetSize, metadata.duration, metadata.hasMotion, engine),
+		muteSound
+	);
+	const ladder = ladderStep(videoBitrate);
+
+	let tierEdge = Infinity;
+	let crf = 23;
+	const preset = 'veryfast';
+	const tune = 'film';
+	const refs = 1;
+	const bframes = 0;
+	let targetFps = metadata.fps;
+	let fpsCap = metadata.fps;
+
+	if (targetSize <= 8 * MEGABYTE) {
+		tierEdge = metadata.hasMotion ? 1024 : 854;
+		crf = metadata.hasMotion ? 18 : 26;
+		fpsCap = 24;
+	} else if (targetSize <= 25 * MEGABYTE) {
+		tierEdge = metadata.hasMotion ? 1440 : 1280;
+		crf = metadata.hasMotion ? 16 : 24;
+		fpsCap = 30;
+	} else if (targetSize <= 50 * MEGABYTE) {
+		crf = metadata.hasMotion ? 14 : 22;
+		fpsCap = 30;
+	} else {
+		crf = metadata.hasMotion ? 12 : 20;
+		fpsCap = 30;
+	}
+
+	const resolution =
+		customResolution(metadata.resolution, dimensions) ??
+		fitWithinLongestEdge(metadata.resolution, Math.min(tierEdge, ladder.maxEdge));
+
+	if (!preserveOriginalFps) {
+		targetFps = Math.min(targetFps, fpsCap, ladder.fpsCap);
+	}
+
+	const bufferSize = metadata.hasMotion ? `${videoBitrate * 3}k` : `${videoBitrate * 2}k`;
+
+	return {
+		videoBitrate: `${videoBitrate}k`,
+		audioBitrate: `${audioBitrate}k`,
+		resolution,
+		crf,
+		preset,
+		tune,
+		bufferSize,
+		refs,
+		bframes,
+		targetFps
+	};
+};

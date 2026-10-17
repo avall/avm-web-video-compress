@@ -1,0 +1,129 @@
+import {
+	calculateCompressionSettings,
+	type OutputDimensions,
+	type VideoMetadata
+} from './settings';
+
+export const OUTPUT_FILE = 'output.mp4';
+
+export interface TrimOptions {
+	enabled: boolean;
+	skipFirstSeconds: number;
+	skipLastSeconds: number;
+}
+
+export interface CompressionArgsOptions {
+	targetSize: number;
+	preserveOriginalFps: boolean;
+	muteSound: boolean;
+	threadCount: number;
+	trim: TrimOptions;
+	dimensions?: OutputDimensions;
+}
+
+const OUTPUT_ARGS = ['-movflags', '+faststart', '-f', 'mp4', '-y', OUTPUT_FILE];
+
+export const effectiveDuration = (duration: number, trim: TrimOptions): number => {
+	if (!trim.enabled) {
+		return duration;
+	}
+	const trimmedDuration = duration - trim.skipFirstSeconds - trim.skipLastSeconds;
+	return trimmedDuration > 0 ? trimmedDuration : duration;
+};
+
+export const buildInputArgs = (
+	inputPath: string,
+	duration: number,
+	trim: TrimOptions
+): string[] => {
+	const args: string[] = [];
+	if (trim.enabled && trim.skipFirstSeconds > 0) {
+		args.push('-ss', trim.skipFirstSeconds.toString());
+	}
+	args.push('-i', inputPath);
+	const outputDuration = effectiveDuration(duration, trim);
+	if (outputDuration < duration) {
+		args.push('-t', outputDuration.toString());
+	}
+	return args;
+};
+
+export const buildAudioOnlyArgs = (
+	inputPath: string,
+	duration: number,
+	trim: TrimOptions,
+	muteSound: boolean
+): string[] => [
+	...buildInputArgs(inputPath, duration, trim),
+	'-c:v',
+	'copy',
+	...(muteSound ? ['-an'] : ['-c:a', 'copy']),
+	...OUTPUT_ARGS
+];
+
+export const buildCompressionArgs = (
+	inputPath: string,
+	metadata: VideoMetadata,
+	options: CompressionArgsOptions
+): string[] => {
+	const settings = calculateCompressionSettings(
+		options.targetSize,
+		{ ...metadata, duration: effectiveDuration(metadata.duration, options.trim) },
+		{
+			preserveOriginalFps: options.preserveOriginalFps,
+			muteSound: options.muteSound,
+			engine: 'ffmpeg',
+			dimensions: options.dimensions
+		}
+	);
+
+	const args = buildInputArgs(inputPath, metadata.duration, options.trim);
+
+	args.push(
+		'-c:v',
+		'libx264',
+		'-preset',
+		settings.preset,
+		'-tune',
+		settings.tune,
+		'-crf',
+		settings.crf.toString(),
+		'-maxrate',
+		settings.videoBitrate,
+		'-bufsize',
+		settings.bufferSize,
+		'-refs',
+		settings.refs.toString(),
+		'-bf',
+		settings.bframes.toString(),
+		'-threads',
+		options.threadCount.toString(),
+		'-me_method',
+		'hex',
+		'-subq',
+		'3',
+		'-pix_fmt',
+		'yuv420p'
+	);
+
+	const videoFilters: string[] = [];
+	if (settings.resolution !== metadata.resolution) {
+		videoFilters.push(`scale=${settings.resolution}:flags=fast_bilinear`);
+	}
+	if (settings.targetFps < metadata.fps) {
+		videoFilters.push(`fps=${settings.targetFps}`);
+	}
+	if (videoFilters.length > 0) {
+		args.push('-vf', videoFilters.join(','));
+	}
+
+	if (options.muteSound) {
+		args.push('-an');
+	} else {
+		args.push('-c:a', 'aac', '-b:a', settings.audioBitrate, '-ac', '2', '-ar', '48000');
+	}
+
+	args.push(...OUTPUT_ARGS);
+
+	return args;
+};
