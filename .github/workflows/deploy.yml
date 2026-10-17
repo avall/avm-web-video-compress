@@ -27,6 +27,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Compile paraglide messages
+        run: npx paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide
+
       - run: npm run check
 
       - run: npm test
