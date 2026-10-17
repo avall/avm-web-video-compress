@@ -70,5 +70,7 @@
 	"custom_dimensions_description": "Ustaw szerokość i/lub wysokość wyjściową w pikselach. Pozostaw pole puste, aby zachować oryginalne proporcje",
 	"output_width": "Szerokość (px)",
 	"output_height": "Wysokość (px)",
-	"dimension_auto": "Automatycznie"
+	"dimension_auto": "Automatycznie",
+	"aspect_ratio_label": "Proporcje obrazu: {ratio} ({size})",
+	"common_sizes_label": "Popularne rozmiary"
 }

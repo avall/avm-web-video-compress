@@ -399,6 +399,7 @@
 					bind:customDimensions
 					bind:outputWidth
 					bind:outputHeight
+					sourceResolution={videoMetadata?.resolution}
 				/>
 
 				{#if isFileSmallerThanTarget}

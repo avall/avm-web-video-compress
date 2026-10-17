@@ -70,5 +70,7 @@
 	"custom_dimensions_description": "Set the output width and/or height in pixels. Leave a field empty to keep the original aspect ratio",
 	"output_width": "Width (px)",
 	"output_height": "Height (px)",
-	"dimension_auto": "Auto"
+	"dimension_auto": "Auto",
+	"aspect_ratio_label": "Aspect ratio: {ratio} ({size})",
+	"common_sizes_label": "Common sizes"
 }

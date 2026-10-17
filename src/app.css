@@ -359,6 +359,30 @@
 		background: var(--bg-section);
 	}
 
+	.size-chip {
+		padding: 4px 10px;
+		border-radius: 999px;
+		border: 1px solid var(--border-subtle);
+		background: var(--bg-section);
+		font-size: 12px;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition:
+			border-color 0.15s,
+			background 0.15s,
+			color 0.15s;
+	}
+	.size-chip:hover {
+		border-color: var(--border-strong);
+		color: var(--text);
+	}
+	.size-chip[aria-pressed='true'] {
+		border-color: var(--accent-color);
+		background: var(--accent-soft);
+		color: var(--text);
+	}
+
 	.switch {
 		appearance: none;
 		position: relative;

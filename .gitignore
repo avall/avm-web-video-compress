@@ -24,3 +24,27 @@ vite.config.ts.timestamp-*
 
 # Paraglide
 src/lib/paraglide
+
+# AI agents and tooling
+.atl/
+odd/
+openspec/
+.claude/
+.codex/
+.gemini/
+.opencode/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.continue/
+.aider*
+.codegraph/
+graphify-out/
+.playwright-mcp/
+.mcp.json
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.github/copilot-instructions.md

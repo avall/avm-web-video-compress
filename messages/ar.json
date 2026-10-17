@@ -70,5 +70,7 @@
 	"custom_dimensions_description": "حدد عرض و/أو ارتفاع الفيديو الناتج بالبكسل. اترك الحقل فارغًا للحفاظ على نسبة العرض إلى الارتفاع الأصلية",
 	"output_width": "العرض (بكسل)",
 	"output_height": "الارتفاع (بكسل)",
-	"dimension_auto": "تلقائي"
+	"dimension_auto": "تلقائي",
+	"aspect_ratio_label": "نسبة العرض إلى الارتفاع: {ratio} ({size})",
+	"common_sizes_label": "أحجام شائعة"
 }

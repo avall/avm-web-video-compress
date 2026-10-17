@@ -6,6 +6,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import SettingToggle from './setting-toggle.svelte';
 	import { MAX_CUSTOM_EDGE } from '$lib/compression/settings';
+	import { aspectLabel, parseResolution, suggestedSizes } from '$lib/compression/aspect';
 
 	interface Props {
 		audioOnlyMode: boolean;
@@ -17,6 +18,7 @@
 		customDimensions: boolean;
 		outputWidth: number | null;
 		outputHeight: number | null;
+		sourceResolution?: string;
 	}
 
 	let {
@@ -28,10 +30,25 @@
 		skipLastSeconds = $bindable(),
 		customDimensions = $bindable(),
 		outputWidth = $bindable(),
-		outputHeight = $bindable()
+		outputHeight = $bindable(),
+		sourceResolution
 	}: Props = $props();
 
 	let open = $state(false);
+
+	const source = $derived(sourceResolution ? parseResolution(sourceResolution) : null);
+	const sourceAspect = $derived(source ? aspectLabel(source.width, source.height) : null);
+	const sizeSuggestions = $derived(source ? suggestedSizes(source.width, source.height) : []);
+
+	// Unicode isolates keep numbers left-to-right inside RTL sentences.
+	const LTR_ISOLATE = String.fromCodePoint(0x2066);
+	const POP_ISOLATE = String.fromCodePoint(0x2069);
+	const isolate = (text: string): string => `${LTR_ISOLATE}${text}${POP_ISOLATE}`;
+
+	const applySize = (width: number, height: number) => {
+		outputWidth = width;
+		outputHeight = height;
+	};
 </script>
 
 <div class="rounded-[14px] border bg-section">
@@ -153,6 +170,33 @@
 								/>
 							</div>
 						</div>
+						{#if source && sourceAspect}
+							<div class="space-y-2 ps-12 pe-3 pb-1">
+								<p class="text-xs text-muted-foreground">
+									{m.aspect_ratio_label({
+										ratio: isolate(sourceAspect),
+										size: isolate(`${source.width}×${source.height}`)
+									})}
+								</p>
+								{#if sizeSuggestions.length > 0}
+									<div class="space-y-1.5">
+										<p class="text-xs text-muted-foreground">{m.common_sizes_label()}</p>
+										<div class="flex flex-wrap gap-1.5">
+											{#each sizeSuggestions as size (`${size.width}x${size.height}`)}
+												<button
+													type="button"
+													class="size-chip"
+													aria-pressed={outputWidth === size.width && outputHeight === size.height}
+													onclick={() => applySize(size.width, size.height)}
+												>
+													<bdi>{size.width}×{size.height}</bdi>
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>

@@ -70,5 +70,7 @@
 	"custom_dimensions_description": "Définir la largeur et/ou la hauteur de sortie en pixels. Laissez un champ vide pour conserver les proportions d'origine",
 	"output_width": "Largeur (px)",
 	"output_height": "Hauteur (px)",
-	"dimension_auto": "Automatique"
+	"dimension_auto": "Automatique",
+	"aspect_ratio_label": "Format d'image : {ratio} ({size})",
+	"common_sizes_label": "Tailles courantes"
 }

@@ -70,5 +70,7 @@
 	"custom_dimensions_description": "출력 너비 및/또는 높이를 픽셀 단위로 지정합니다. 원본 비율을 유지하려면 칸을 비워 두세요",
 	"output_width": "너비(px)",
 	"output_height": "높이(px)",
-	"dimension_auto": "자동"
+	"dimension_auto": "자동",
+	"aspect_ratio_label": "화면 비율: {ratio} ({size})",
+	"common_sizes_label": "일반적인 크기"
 }
