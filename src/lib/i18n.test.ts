@@ -9,6 +9,8 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 const OPENING_LINK = /<a\b[^>]*>/g;
 const CLOSING_LINK = /<\/a>/g;
 const SAME_IN_EVERY_LANGUAGE = new Set(['app_title']);
+// Words that are spelled the same as in English in a given language.
+const SAME_AS_BASE: Record<string, Set<string>> = { es: new Set(['no']) };
 
 const settings: { baseLocale: string; locales: string[] } = JSON.parse(
 	readFileSync(SETTINGS, 'utf8')
@@ -90,7 +92,10 @@ describe.each(translatedLocales)('%s against the base locale', (locale) => {
 	it('translates every text', () => {
 		const messages = readMessages(locale);
 		const untranslated = Object.keys(base).filter(
-			(key) => !SAME_IN_EVERY_LANGUAGE.has(key) && messages[key] === base[key]
+			(key) =>
+				!SAME_IN_EVERY_LANGUAGE.has(key) &&
+				!SAME_AS_BASE[locale]?.has(key) &&
+				messages[key] === base[key]
 		);
 		expect(untranslated).toEqual([]);
 	});

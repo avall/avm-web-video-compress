@@ -27,7 +27,7 @@
 - **Platform presets**: Discord, Discord Nitro, WhatsApp, Gmail / Outlook, generic sizes, or any custom size from 1 to 2048 MB.
 - **Large files**: videos up to 5 GB, in MP4, MOV, MKV, WebM, AVI and more.
 - **Options**: drag and drop, trim the start or the end, mute the sound, keep the original frame rate, or keep the audio only.
-- **Five languages**: English, French, Polish, Korean and Arabic, with light, dark and Catppuccin themes.
+- **Six languages**: English, Spanish, French, Polish, Korean and Arabic, with light, dark and Catppuccin themes.
 
 ## Benchmark
 

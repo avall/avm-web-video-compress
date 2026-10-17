@@ -1,12 +1,18 @@
 <script lang="ts">
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { getLocale, setLocale, locales } from '$lib/paraglide/runtime.js';
+	import { baseLocale, getLocale, setLocale, locales } from '$lib/paraglide/runtime.js';
+	import { onMount } from 'svelte';
 	import Languages from '@lucide/svelte/icons/languages';
 	import { browser } from '$app/environment';
 	import * as m from '$lib/paraglide/messages.js';
 
 	type Locale = (typeof locales)[number];
-	const currentLang = getLocale();
+	// Pages are prerendered in the base locale, so start there and read the real locale once mounted.
+	let currentLang = $state<Locale>(baseLocale);
+
+	onMount(() => {
+		currentLang = getLocale();
+	});
 
 	function toFlag(region?: string): string {
 		if (!region) return '🌐';
@@ -41,17 +47,20 @@
 		}
 	}
 
-	const languageNames = new Intl.DisplayNames([currentLang || 'en'], { type: 'language' });
-	const languages = locales.map((l) => {
-		const region = getRegionFromLocale(l);
-		const name = languageNames.of(l);
-		return {
-			value: l,
-			label: name ? name.charAt(0).toUpperCase() + name.slice(1) : l.toUpperCase(),
-			flag: toFlag(region),
-			flagSrc: regionToTwemojiSvg(region)
-		};
+	const languages = $derived.by(() => {
+		const languageNames = new Intl.DisplayNames([currentLang || 'en'], { type: 'language' });
+		return locales.map((l) => {
+			const region = getRegionFromLocale(l);
+			const name = languageNames.of(l);
+			return {
+				value: l,
+				label: name ? name.charAt(0).toUpperCase() + name.slice(1) : l.toUpperCase(),
+				flag: toFlag(region),
+				flagSrc: regionToTwemojiSvg(region)
+			};
+		});
 	});
+	const current = $derived(languages.find((lang) => lang.value === currentLang));
 
 	function handleLanguageChange(value: string | undefined) {
 		if (value && browser && locales.includes(value as Locale)) {
@@ -66,19 +75,14 @@
 		class="flex h-9 items-center gap-2 rounded-full border-border-strong px-3 font-semibold text-white hover:border-primary"
 	>
 		<Languages class="h-4 w-4" />
-		{#if languages.find((lang) => lang.value === currentLang)?.flagSrc}
-			<img
-				src={languages.find((lang) => lang.value === currentLang)!.flagSrc}
-				alt=""
-				class="h-4 w-4 object-contain"
-				aria-hidden="true"
-			/>
+		{#if current?.flagSrc}
+			<img src={current.flagSrc} alt="" class="h-4 w-4 object-contain" aria-hidden="true" />
 		{:else}
 			<span
 				class="inline-flex h-4 w-4 items-center justify-center text-base leading-none"
 				style="font-variant-emoji: emoji;"
 			>
-				{languages.find((lang) => lang.value === currentLang)?.flag}
+				{current?.flag}
 			</span>
 		{/if}
 	</Select.Trigger>
