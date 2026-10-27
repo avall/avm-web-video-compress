@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src=".github/assets/demo.gif" alt="A video is dropped on compress.lol and compressed to 25 MB in the browser" width="800">
+  <img src=".github/assets/screenshot.png" alt="compress.lol interface: dark background, white text and green accents" width="800">
 </p>
 
 ## Features
